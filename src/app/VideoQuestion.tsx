@@ -357,6 +357,16 @@ export function VideoQuestion({
         )}
 
         <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center">
+          {phase === "prep" && (
+            <button
+              type="button"
+              onClick={startRecording}
+              className="inline-flex items-center justify-center rounded-xl border border-black bg-white px-4 py-2.5 text-sm font-medium text-black hover:opacity-70"
+            >
+              Skip Prep
+            </button>
+          )}
+
           {phase === "recording" && (
             <button
               type="button"
@@ -391,6 +401,7 @@ export function VideoQuestion({
               <p>
                 Camera stays on-device. Nothing is recorded or uploaded.
               </p>
+              <p>You can skip preparation time at any point.</p>
             </div>
 
             <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:justify-end">

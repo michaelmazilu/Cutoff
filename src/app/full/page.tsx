@@ -17,7 +17,7 @@ const HARD_MAX_WORDS = 350;
 
 const VIDEO_2_PREP_SECONDS = 2 * 60;
 const VIDEO_2_RECORD_SECONDS = 2 * 60;
-const VIDEO_3_PREP_SECONDS = 2 * 60;
+const VIDEO_3_PREP_SECONDS = 3 * 60;
 const VIDEO_3_RECORD_SECONDS = 3 * 60;
 
 type Section = "intro" | "written" | "video2" | "video3" | "summary";
@@ -396,6 +396,7 @@ export default function FullTestPage() {
   if (section === "video2") {
     return (
       <VideoQuestion
+        key="video2"
         questionLabel="Q2."
         prompt={videoPrompt2}
         onPromptChange={setVideoPrompt2}
@@ -414,6 +415,7 @@ export default function FullTestPage() {
   if (section === "video3") {
     return (
       <VideoQuestion
+        key="video3"
         questionLabel="Q3."
         prompt={videoPrompt3}
         onPromptChange={setVideoPrompt3}
@@ -457,7 +459,7 @@ export default function FullTestPage() {
             <div className="mt-6 space-y-3 text-sm leading-6 text-black/70">
               <p>Question 1: 10 minutes written response.</p>
               <p>Question 2: 2 minutes prep + 2 minutes speaking.</p>
-              <p>Question 3: 2 minutes prep + 3 minutes speaking.</p>
+              <p>Question 3: 3 minutes prep + 3 minutes speaking.</p>
               <p className="text-xs text-black/50">
                 Camera is live-only (nothing recorded or uploaded).
               </p>
