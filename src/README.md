@@ -1,8 +1,11 @@
-# Timed Written Response Practice
+# UofT Personal Profile Practice
 
-Minimal Next.js (App Router) practice app that simulates a 10-minute timed written response with an optional live webcam preview.
+Minimal Next.js (App Router) practice app that simulates:
+- a 10-minute timed written response
+- a full test flow (written + 2 timed video questions)
 
-- Webcam is live-only and stays on-device (no recording, no uploads, no storage).
+- Written practice webcam preview is live-only and stays on-device.
+- Full test video is live-only (no recording, no uploads).
 
 ## Run locally
 

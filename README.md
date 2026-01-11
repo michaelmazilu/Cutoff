@@ -1,5 +1,5 @@
 # Cutoff
-A tool to prep UofT interview written questions.
+A tool to prep UofT interview questions (written + video practice).
 
 ## Run locally
 
