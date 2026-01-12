@@ -32,6 +32,14 @@ export default function FullTestPage() {
   const [section, setSection] = useState<Section>("intro");
   const [writtenHelpOpen, setWrittenHelpOpen] = useState<boolean>(false);
   const [startingVideo2, setStartingVideo2] = useState<boolean>(false);
+  const [writtenPromptEditorOpen, setWrittenPromptEditorOpen] =
+    useState<boolean>(false);
+  const [writtenPromptDraft, setWrittenPromptDraft] = useState<string>("");
+  const [writtenPromptDraftError, setWrittenPromptDraftError] = useState<
+    string | null
+  >(null);
+  const writtenDefaultPromptRef = useRef<string>("");
+  const writtenWasRunningBeforeEditRef = useRef<boolean>(false);
 
   const [writtenPrompt, setWrittenPrompt] = useState<string>("");
   const [videoPrompt2, setVideoPrompt2] = useState<string>("");
@@ -95,6 +103,48 @@ export default function FullTestPage() {
     [stopWrittenTimer],
   );
 
+  const pauseWrittenTimer = useCallback(() => {
+    const deadline = writtenDeadlineMsRef.current;
+    const remainingNow =
+      deadline == null
+        ? writtenSecondsRemainingRef.current
+        : Math.max(0, Math.ceil((deadline - Date.now()) / 1000));
+
+    stopWrittenTimer();
+    writtenDeadlineMsRef.current = null;
+    setWrittenIsRunning(false);
+    setWrittenSecondsRemaining(remainingNow);
+    writtenSecondsRemainingRef.current = remainingNow;
+  }, [stopWrittenTimer]);
+
+  const resumeWrittenTimer = useCallback(() => {
+    if (writtenEndReason) return;
+    const remaining = writtenSecondsRemainingRef.current;
+    if (remaining <= 0) {
+      endWrittenSession("timeup");
+      return;
+    }
+    writtenHasExpiredRef.current = false;
+    writtenDeadlineMsRef.current = Date.now() + remaining * 1000;
+    setWrittenIsRunning(true);
+  }, [endWrittenSession, writtenEndReason]);
+
+  const restartWrittenQuestion = useCallback(
+    (nextPrompt: string) => {
+      stopWrittenTimer();
+      writtenHasExpiredRef.current = false;
+      writtenDeadlineMsRef.current = Date.now() + WRITTEN_TOTAL_SECONDS * 1000;
+
+      setWrittenPrompt(nextPrompt);
+      setResponseText("");
+      setWrittenSecondsRemaining(WRITTEN_TOTAL_SECONDS);
+      writtenSecondsRemainingRef.current = WRITTEN_TOTAL_SECONDS;
+      setWrittenEndReason(null);
+      setWrittenIsRunning(true);
+    },
+    [stopWrittenTimer],
+  );
+
   const reset = useCallback(() => {
     stopWrittenTimer();
     clearCopyTimeout();
@@ -108,6 +158,11 @@ export default function FullTestPage() {
     setSection("intro");
     setWrittenHelpOpen(false);
     setStartingVideo2(false);
+    setWrittenPromptEditorOpen(false);
+    setWrittenPromptDraft("");
+    setWrittenPromptDraftError(null);
+    writtenDefaultPromptRef.current = "";
+    writtenWasRunningBeforeEditRef.current = false;
     setWrittenPrompt("");
     setVideoPrompt2("");
     setVideoPrompt3("");
@@ -133,10 +188,15 @@ export default function FullTestPage() {
     const nextVideo3 = getRandomThreeVariableVideoPrompt();
 
     setWrittenPrompt(nextWritten);
+    writtenDefaultPromptRef.current = nextWritten;
     setVideoPrompt2(nextVideo2);
     setVideoPrompt3(nextVideo3);
     setResponseText("");
     setCopyStatus(null);
+    setWrittenPromptEditorOpen(false);
+    setWrittenPromptDraft("");
+    setWrittenPromptDraftError(null);
+    writtenWasRunningBeforeEditRef.current = false;
 
     setWrittenSecondsRemaining(WRITTEN_TOTAL_SECONDS);
     writtenSecondsRemainingRef.current = WRITTEN_TOTAL_SECONDS;
@@ -281,6 +341,26 @@ export default function FullTestPage() {
               <span className="font-semibold">Q1.</span>{" "}
               <span className="whitespace-pre-wrap">{writtenPrompt}</span>
 
+              <div className="mt-4 flex flex-wrap items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    writtenWasRunningBeforeEditRef.current = writtenIsRunning;
+                    if (writtenIsRunning) pauseWrittenTimer();
+                    setWrittenPromptDraft(writtenPrompt);
+                    setWrittenPromptDraftError(null);
+                    setWrittenPromptEditorOpen(true);
+                  }}
+                  className="inline-flex items-center justify-center rounded-xl border border-black bg-white px-3 py-1.5 text-xs font-medium text-black hover:opacity-70"
+                >
+                  Edit prompt
+                </button>
+                {writtenDefaultPromptRef.current &&
+                  writtenPrompt !== writtenDefaultPromptRef.current && (
+                    <div className="text-xs text-black/50">Custom prompt</div>
+                  )}
+              </div>
+
               <div className="mt-8 text-sm leading-6 text-black/70">
                 Minimum {WORD_TARGET} words, maximum {HARD_MAX_WORDS} words.
               </div>
@@ -384,6 +464,100 @@ export default function FullTestPage() {
                   className="inline-flex items-center justify-center rounded-xl border border-black bg-white px-4 py-2.5 text-sm font-medium text-black hover:opacity-70"
                 >
                   Back to Menu
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {writtenPromptEditorOpen && (
+          <div className="fixed inset-0 z-30 flex items-center justify-center bg-black/60 px-6">
+            <div className="w-full max-w-xl rounded-2xl border border-black bg-white p-5">
+              <div className="text-base font-semibold text-black">
+                Edit Question 1 Prompt
+              </div>
+              <div className="mt-2 text-sm leading-6 text-black/70">
+                Saving replaces the prompt, clears your response, and restarts the
+                10-minute timer.
+              </div>
+
+              <label
+                htmlFor="custom-written-prompt"
+                className="mt-4 block text-sm font-medium text-black"
+              >
+                Prompt
+              </label>
+              <textarea
+                id="custom-written-prompt"
+                value={writtenPromptDraft}
+                onChange={(e) => setWrittenPromptDraft(e.target.value)}
+                rows={6}
+                className="mt-2 w-full resize-y rounded-xl border border-black bg-white p-3 text-sm text-black shadow-sm outline-none placeholder:text-black/40 focus:border-black"
+                placeholder="Paste your prompt here…"
+              />
+
+              {writtenPromptDraftError && (
+                <div className="mt-2 text-sm text-black">
+                  {writtenPromptDraftError}
+                </div>
+              )}
+
+              <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:justify-end">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setWrittenPromptEditorOpen(false);
+                    setWrittenPromptDraftError(null);
+                    if (
+                      writtenWasRunningBeforeEditRef.current &&
+                      !writtenEndReason
+                    ) {
+                      resumeWrittenTimer();
+                    }
+                    writtenWasRunningBeforeEditRef.current = false;
+                  }}
+                  className="inline-flex items-center justify-center rounded-xl border border-black bg-white px-4 py-2.5 text-sm font-medium text-black hover:opacity-70"
+                >
+                  Cancel
+                </button>
+
+                <button
+                  type="button"
+                  disabled={
+                    !writtenDefaultPromptRef.current ||
+                    writtenPrompt === writtenDefaultPromptRef.current
+                  }
+                  onClick={() => {
+                    const original = writtenDefaultPromptRef.current;
+                    if (!original) return;
+                    setWrittenPromptEditorOpen(false);
+                    setWrittenPromptDraftError(null);
+                    writtenWasRunningBeforeEditRef.current = false;
+                    restartWrittenQuestion(original);
+                  }}
+                  className="inline-flex items-center justify-center rounded-xl border border-black bg-white px-4 py-2.5 text-sm font-medium text-black hover:opacity-70 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  Reset Prompt
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    const trimmed = writtenPromptDraft.trim();
+                    if (!trimmed) {
+                      setWrittenPromptDraftError(
+                        "Please enter a prompt to continue.",
+                      );
+                      return;
+                    }
+                    setWrittenPromptEditorOpen(false);
+                    setWrittenPromptDraftError(null);
+                    writtenWasRunningBeforeEditRef.current = false;
+                    restartWrittenQuestion(trimmed);
+                  }}
+                  className="inline-flex items-center justify-center rounded-xl border border-black bg-white px-4 py-2.5 text-sm font-medium text-black hover:opacity-70"
+                >
+                  Use This Prompt
                 </button>
               </div>
             </div>
